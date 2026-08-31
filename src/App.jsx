@@ -501,7 +501,7 @@ export default function App() {
   };
 
   return (
-    <div class="min-h-screen bg-cyber-bg text-slate-200 flex flex-col font-sans">
+    <div className="min-h-screen bg-cyber-bg text-slate-200 flex flex-col font-sans">
       {/* Top Cyber Navigation Bar */}
       <Header 
         activeTab={activeTab} 
@@ -511,7 +511,7 @@ export default function App() {
       />
 
       {/* Main Workspace Container */}
-      <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6">
         {activeTab === 'dashboard' && (
           <Dashboard 
             metrics={metrics}
@@ -566,15 +566,17 @@ export default function App() {
         )}
       </main>
 
-      {/* SOC Footer */}
-      <footer class="border-t border-cyber-border bg-[#080d17] py-4 px-6 text-xs font-mono text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <div>
-          <span>AegisSOC Lab Operations • Security Analyst Workbench</span>
-        </div>
-        <div class="flex items-center space-x-4">
-          <span class="text-cyan-400">STATUS: ALL LAB SYSTEMS NOMINAL</span>
+      {/* SOC Sentinel Platform Footer */}
+      <footer className="border-t border-cyber-border bg-[#080d17] py-4 px-6 text-xs font-mono text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center space-x-2">
+          <span className="text-cyan-400 font-bold">SOC SENTINEL</span>
           <span>•</span>
-          <span>LOG RETENTION: 90 DAYS</span>
+          <span>Enterprise Cyber Threat Detection, SIEM & SOAR Platform</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <span className="text-emerald-400">● LIVE TELEMETRY INGESTION ACTIVE</span>
+          <span>•</span>
+          <span>MITRE ATT&CK® v14 COMPLIANT</span>
         </div>
       </footer>
     </div>
