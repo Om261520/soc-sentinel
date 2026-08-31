@@ -1,11 +1,23 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.resolve(__dirname, '../dist');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static assets from dist if built
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
 
 // In-Memory Database State
 let telemetryLogs = [];
@@ -522,6 +534,19 @@ app.post('/api/cases', (req, res) => {
   res.json({ message: 'Incident case created', case: newCase });
 });
 
+// SPA fallback for non-API routes
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'Endpoint not found' });
+  }
+  const indexPath = path.join(distPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.send('SOC Sentinel API Server is active. Please build the frontend (`npm run build`) to serve the UI.');
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`🛡️  AegisSOC Threat Detection Lab Server running on http://localhost:${PORT}`);
+  console.log(`🛡️  SOC Sentinel Platform running on http://localhost:${PORT}`);
 });
