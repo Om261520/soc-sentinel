@@ -1,140 +1,88 @@
-from datetime import datetime, timedelta, timezone
-from typing import List, Dict, Any
+from datetime import datetime, timedelta
+from typing import Dict, Any, List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from app.database.session import get_db
-from app.models.models import Scan, Detection
-from app.schemas.schemas import (
-    DashboardStatsResponse, CategoryDistribution, TimeSeriesDataPoint,
-    TopTriggeredRule, ScanSummary
-)
+from app.models.models import SecurityLog, Alert, Incident
 
-router = APIRouter(prefix="/dashboard", tags=["Analyst Dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
+@router.get("/stats")
+def get_dashboard_stats(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    total_events = db.query(func.count(SecurityLog.id)).scalar() or 0
+    critical_alerts = db.query(func.count(Alert.id)).filter(Alert.severity == "CRITICAL").scalar() or 0
+    high_alerts = db.query(func.count(Alert.id)).filter(Alert.severity == "HIGH").scalar() or 0
+    open_incidents = db.query(func.count(Incident.id)).filter(Incident.status.in_(["Open", "Investigating"])).scalar() or 0
+    threats_detected = db.query(func.count(Alert.id)).scalar() or 0
+    active_investigations = db.query(func.count(Alert.id)).filter(Alert.status == "Investigating").scalar() or 0
 
-@router.get("/stats", response_model=DashboardStatsResponse)
-def get_dashboard_stats(db: Session = Depends(get_db)):
-    """Retrieve comprehensive cybersecurity metrics and chart aggregations for the SOC dashboard."""
-    scans = db.query(Scan).all()
-    total_scanned = len(scans)
+    return {
+        "total_events": total_events,
+        "critical_alerts": critical_alerts,
+        "high_alerts": high_alerts,
+        "open_incidents": open_incidents,
+        "threats_detected": threats_detected,
+        "active_investigations": active_investigations,
+    }
 
-    if total_scanned == 0:
-        return DashboardStatsResponse(
-            total_scanned=0,
-            safe_count=0,
-            suspicious_count=0,
-            phishing_count=0,
-            avg_risk_score=0.0,
-            high_risk_count=0,
-            classification_distribution=[
-                CategoryDistribution(name="Safe", value=0, color="#10b981"),
-                CategoryDistribution(name="Suspicious", value=0, color="#f59e0b"),
-                CategoryDistribution(name="Phishing", value=0, color="#ef4444")
-            ],
-            risk_distribution=[
-                CategoryDistribution(name="Low (0-29)", value=0, color="#10b981"),
-                CategoryDistribution(name="Medium (30-59)", value=0, color="#f59e0b"),
-                CategoryDistribution(name="High (60-79)", value=0, color="#f97316"),
-                CategoryDistribution(name="Critical (80-100)", value=0, color="#ef4444")
-            ],
-            scans_over_time=[],
-            top_triggered_rules=[],
-            recent_scans=[]
-        )
-
-    safe_count = sum(1 for s in scans if s.classification == "SAFE")
-    suspicious_count = sum(1 for s in scans if s.classification == "SUSPICIOUS")
-    phishing_count = sum(1 for s in scans if s.classification == "PHISHING")
-    avg_risk_score = round(sum(s.risk_score for s in scans) / total_scanned, 1)
-    high_risk_count = sum(1 for s in scans if s.risk_score >= 60)
-
-    # Classification Donut
-    class_dist = [
-        CategoryDistribution(name="Safe", value=safe_count, color="#10b981"),
-        CategoryDistribution(name="Suspicious", value=suspicious_count, color="#f59e0b"),
-        CategoryDistribution(name="Phishing", value=phishing_count, color="#ef4444")
+@router.get("/charts")
+def get_dashboard_charts(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    # 1. Alert Severity Distribution
+    severity_counts = db.query(
+        Alert.severity, func.count(Alert.id)
+    ).group_by(Alert.severity).all()
+    
+    severity_dist = {sev: count for sev, count in severity_counts}
+    severity_data = [
+        {"name": "Critical", "value": severity_dist.get("CRITICAL", 0), "color": "#EF4444"},
+        {"name": "High", "value": severity_dist.get("HIGH", 0), "color": "#F97316"},
+        {"name": "Medium", "value": severity_dist.get("MEDIUM", 0), "color": "#EAB308"},
+        {"name": "Low", "value": severity_dist.get("LOW", 0), "color": "#3B82F6"},
     ]
 
-    # Risk Tier Bar Chart
-    low_risk = sum(1 for s in scans if s.risk_score < 30)
-    med_risk = sum(1 for s in scans if 30 <= s.risk_score < 60)
-    high_risk = sum(1 for s in scans if 60 <= s.risk_score < 80)
-    crit_risk = sum(1 for s in scans if s.risk_score >= 80)
+    # 2. Attack Categories Distribution
+    category_counts = db.query(
+        Alert.category, func.count(Alert.id)
+    ).group_by(Alert.category).order_by(desc(func.count(Alert.id))).limit(8).all()
+    
+    category_data = [{"category": cat, "count": cnt} for cat, cnt in category_counts]
 
-    risk_dist = [
-        CategoryDistribution(name="Low (0-29)", value=low_risk, color="#10b981"),
-        CategoryDistribution(name="Medium (30-59)", value=med_risk, color="#f59e0b"),
-        CategoryDistribution(name="High (60-79)", value=high_risk, color="#f97316"),
-        CategoryDistribution(name="Critical (80-100)", value=crit_risk, color="#ef4444")
+    # 3. Top Source IPs
+    top_ips = db.query(
+        Alert.source_ip, 
+        func.count(Alert.id).label("alert_count"),
+        func.max(Alert.severity).label("max_severity")
+    ).filter(Alert.source_ip.isnot(None)).group_by(Alert.source_ip).order_by(desc("alert_count")).limit(5).all()
+
+    top_ips_data = [
+        {"ip": ip, "alerts": count, "severity": max_sev or "MEDIUM"} 
+        for ip, count, max_sev in top_ips
     ]
 
-    # Scans over time (last 7 days grouped)
-    now = datetime.now(timezone.utc)
-    time_series = []
-    for i in range(6, -1, -1):
-        day_start = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day_start + timedelta(days=1)
-        day_label = day_start.strftime("%b %d")
+    # 4. Alerts Over Time (24 Hour trend)
+    now = datetime.utcnow()
+    hourly_trends = []
+    for i in range(12, -1, -1):
+        hour_start = now - timedelta(hours=i*2)
+        hour_end = hour_start + timedelta(hours=2)
         
-        day_scans = []
-        for s in scans:
-            if s.timestamp:
-                ts = s.timestamp if s.timestamp.tzinfo else s.timestamp.replace(tzinfo=timezone.utc)
-                if (day_start <= ts < day_end) or (i == 0 and ts >= day_start):
-                    day_scans.append(s)
-        
-        time_series.append(TimeSeriesDataPoint(
-            date=day_label,
-            safe=sum(1 for s in day_scans if s.classification == "SAFE"),
-            suspicious=sum(1 for s in day_scans if s.classification == "SUSPICIOUS"),
-            phishing=sum(1 for s in day_scans if s.classification == "PHISHING"),
-            total=len(day_scans)
-        ))
+        crit = db.query(func.count(Alert.id)).filter(Alert.severity == "CRITICAL", Alert.timestamp >= hour_start, Alert.timestamp < hour_end).scalar() or 0
+        high = db.query(func.count(Alert.id)).filter(Alert.severity == "HIGH", Alert.timestamp >= hour_start, Alert.timestamp < hour_end).scalar() or 0
+        med = db.query(func.count(Alert.id)).filter(Alert.severity == "MEDIUM", Alert.timestamp >= hour_start, Alert.timestamp < hour_end).scalar() or 0
+        low = db.query(func.count(Alert.id)).filter(Alert.severity == "LOW", Alert.timestamp >= hour_start, Alert.timestamp < hour_end).scalar() or 0
 
-    # Top Triggered Rules
-    rule_counts = (
-        db.query(
-            Detection.rule_id,
-            Detection.rule_name,
-            Detection.severity,
-            func.count(Detection.id).label("count")
-        )
-        .filter(Detection.triggered == True)
-        .group_by(Detection.rule_id, Detection.rule_name, Detection.severity)
-        .order_by(desc("count"))
-        .limit(6)
-        .all()
-    )
+        hourly_trends.append({
+            "time": hour_start.strftime("%H:%M"),
+            "Critical": crit,
+            "High": high,
+            "Medium": med,
+            "Low": low
+        })
 
-    top_rules = [
-        TopTriggeredRule(
-            rule_id=r.rule_id,
-            rule_name=r.rule_name,
-            count=r.count,
-            severity=r.severity
-        ) for r in rule_counts
-    ]
-
-    # Recent scans (latest 6)
-    recent = (
-        db.query(Scan)
-        .order_by(desc(Scan.timestamp))
-        .limit(6)
-        .all()
-    )
-    recent_items = [ScanSummary.model_validate(s) for s in recent]
-
-    return DashboardStatsResponse(
-        total_scanned=total_scanned,
-        safe_count=safe_count,
-        suspicious_count=suspicious_count,
-        phishing_count=phishing_count,
-        avg_risk_score=avg_risk_score,
-        high_risk_count=high_risk_count,
-        classification_distribution=class_dist,
-        risk_distribution=risk_dist,
-        scans_over_time=time_series,
-        top_triggered_rules=top_rules,
-        recent_scans=recent_items
-    )
+    return {
+        "severity_distribution": severity_data,
+        "attack_categories": category_data,
+        "top_source_ips": top_ips_data,
+        "alerts_over_time": hourly_trends
+    }

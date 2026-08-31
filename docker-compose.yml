@@ -3,26 +3,21 @@ version: '3.8'
 services:
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: phishguard-backend
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./phishguard.db
-      - JWT_SECRET_KEY=phishguard-production-docker-secret-2026
-      - CORS_ORIGINS=["http://localhost:5173","http://localhost:3000","http://localhost"]
+      - DATABASE_URL=sqlite:///./soc_sentinel.db
+      - JWT_SECRET_KEY=soc_sentinel_super_secret_jwt_key_2026_change_in_prod
     volumes:
-      - ./backend/phishguard.db:/app/backend/phishguard.db
-    restart: unless-stopped
+      - ./backend/soc_sentinel.db:/app/soc_sentinel.db
 
   frontend:
     build:
       context: ./frontend
-      dockerfile: ../Dockerfile.frontend
-    container_name: phishguard-frontend
+      dockerfile: Dockerfile
     ports:
       - "5173:80"
     depends_on:
       - backend
-    restart: unless-stopped

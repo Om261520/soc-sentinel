@@ -1,0 +1,16 @@
+[
+  {
+    "timestamp": "2026-08-27T11:02:10Z",
+    "event_type": "firewall",
+    "source_ip": "45.142.214.165",
+    "destination_ip": "10.0.0.50",
+    "source_port": 61200,
+    "destination_port": 3389,
+    "protocol": "TCP",
+    "hostname": "edge-fw-01",
+    "action": "block",
+    "status": "blocked",
+    "message": "Firewall denied TCP connection probe to RDP port 3389",
+    "severity": "LOW"
+  }
+]

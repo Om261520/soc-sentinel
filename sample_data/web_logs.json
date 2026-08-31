@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-08-27T11:45:00Z",
+    "event_type": "web",
+    "source_ip": "185.220.101.5",
+    "destination_ip": "10.0.0.80",
+    "source_port": 58120,
+    "destination_port": 443,
+    "protocol": "HTTPS",
+    "username": "anonymous",
+    "hostname": "web-app-prod",
+    "action": "HTTP POST",
+    "status": "suspicious",
+    "message": "Web Application Firewall detected SQL injection signature in GET parameter 'category_id'",
+    "raw_log": "GET /products.php?id=1' UNION SELECT username, password_hash FROM users-- HTTP/1.1 Host: shop.company.com",
+    "severity": "HIGH"
+  }
+]

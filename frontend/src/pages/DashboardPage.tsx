@@ -1,402 +1,376 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { dashboardService } from '../services/api';
-import { DashboardStats } from '../types';
-import { StatCard } from '../components/StatCard';
-import { RiskBadge } from '../components/RiskBadge';
-import { formatDateTime } from '../utils/formatters';
-import {
-  Shield,
-  ShieldCheck,
-  AlertTriangle,
-  ShieldAlert,
-  Flame,
-  Activity,
-  ArrowRight,
-  TrendingUp,
-  Search,
-  RefreshCw,
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  Activity, AlertTriangle, ShieldAlert, ShieldCheck, Flame, Eye,
+  TrendingUp, ArrowUpRight, Search, Filter, ExternalLink, RefreshCw
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  CartesianGrid,
+import { 
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  PieChart, Pie, Cell, BarChart, Bar 
 } from 'recharts';
+import { api } from '../services/api';
+import { DashboardStats, DashboardCharts, Alert } from '../types';
 
 export const DashboardPage: React.FC = () => {
-  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [quickUrl, setQuickUrl] = useState<string>('');
+  const [charts, setCharts] = useState<DashboardCharts | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [severityFilter, setSeverityFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
 
-  const fetchStats = async () => {
-    setLoading(true);
+  const loadData = async () => {
     try {
-      const data = await dashboardService.getStats();
-      setStats(data);
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      setLoading(true);
+      const [sData, cData, aData] = await Promise.all([
+        api.getDashboardStats(),
+        api.getDashboardCharts(),
+        api.getAlerts({ limit: 10, severity: severityFilter === 'ALL' ? undefined : severityFilter, search: search || undefined })
+      ]);
+      setStats(sData);
+      setCharts(cData);
+      setAlerts(aData);
+    } catch (err) {
+      console.error('Failed to load dashboard:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    loadData();
+    const interval = setInterval(loadData, 10000); // 10s auto refresh
+    return () => clearInterval(interval);
+  }, [severityFilter, search]);
 
-  const handleQuickScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickUrl.trim()) return;
-    navigate('/scanner', { state: { targetUrl: quickUrl.trim() } });
+  const getSeverityBadgeClass = (severity: string) => {
+    switch (severity.toUpperCase()) {
+      case 'CRITICAL':
+        return 'bg-red-500/10 text-red-400 border-red-500/30';
+      case 'HIGH':
+        return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
+      case 'MEDIUM':
+        return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30';
+      default:
+        return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+    }
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header & Quick Scan Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-100 flex items-center gap-3">
-            <span>SOC Security Dashboard</span>
-            <span className="text-xs px-2.5 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full font-mono">
-              Live Telemetry
-            </span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time phishing detection telemetry, ML model classifications, and heuristic threat indicators.
-          </p>
+          <h1 className="text-xl font-bold text-white font-mono">SECURITY OPERATIONS CENTER DASHBOARD</h1>
+          <p className="text-xs text-gray-400 font-mono">Real-time Threat Monitoring & Incident Response Overview</p>
         </div>
-
         <button
-          onClick={fetchStats}
-          disabled={loading}
-          className="self-start md:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 transition-all"
+          onClick={loadData}
+          className="flex items-center space-x-2 px-3 py-1.5 bg-[#1F2937] hover:bg-gray-700 text-gray-300 text-xs font-mono rounded-lg border border-gray-700 transition-colors"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
-          Refresh Stats
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>REFRESH METRICS</span>
         </button>
       </div>
 
-      {/* Quick URL Scanner Banner */}
-      <div className="cyber-card p-6 border-cyan-500/30 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-cyan-950/20">
-        <form onSubmit={handleQuickScan} className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              value={quickUrl}
-              onChange={(e) => setQuickUrl(e.target.value)}
-              placeholder="Enter suspicious URL for instant static security analysis (e.g. paypal-verify-account.com)..."
-              className="w-full bg-[#090d16] border border-slate-700/80 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
-            />
+      {/* Top 6 KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* Total Events */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="text-[11px] font-mono uppercase">Total Events</span>
+            <Activity className="w-4 h-4 text-blue-400" />
           </div>
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/25 transition-all flex-shrink-0"
-          >
-            <Shield className="w-4 h-4" />
-            Analyze URL
-          </button>
-        </form>
+          <div className="text-2xl font-bold font-mono text-white">
+            {stats?.total_events.toLocaleString() || '0'}
+          </div>
+          <div className="flex items-center text-[10px] text-emerald-400 font-mono">
+            <TrendingUp className="w-3 h-3 mr-1" />
+            <span>+12.4% vs last hour</span>
+          </div>
+        </div>
+
+        {/* Critical Alerts */}
+        <div className="bg-[#111827] border border-red-500/30 rounded-xl p-4 space-y-2 glow-critical">
+          <div className="flex items-center justify-between text-red-400">
+            <span className="text-[11px] font-mono uppercase">Critical Alerts</span>
+            <Flame className="w-4 h-4 text-red-400 animate-pulse" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-red-400">
+            {stats?.critical_alerts || '0'}
+          </div>
+          <div className="text-[10px] text-red-400/80 font-mono">Immediate Triage Needed</div>
+        </div>
+
+        {/* High Alerts */}
+        <div className="bg-[#111827] border border-orange-500/30 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-orange-400">
+            <span className="text-[11px] font-mono uppercase">High Alerts</span>
+            <ShieldAlert className="w-4 h-4 text-orange-400" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-orange-400">
+            {stats?.high_alerts || '0'}
+          </div>
+          <div className="text-[10px] text-orange-400/80 font-mono">Elevated Threat Level</div>
+        </div>
+
+        {/* Open Incidents */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="text-[11px] font-mono uppercase">Open Incidents</span>
+            <AlertTriangle className="w-4 h-4 text-yellow-400" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-yellow-400">
+            {stats?.open_incidents || '0'}
+          </div>
+          <div className="text-[10px] text-gray-400 font-mono">Assigned to SOC Team</div>
+        </div>
+
+        {/* Threats Detected */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="text-[11px] font-mono uppercase">Threats Flagged</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-white">
+            {stats?.threats_detected || '0'}
+          </div>
+          <div className="text-[10px] text-emerald-400 font-mono">Detection Rules Active</div>
+        </div>
+
+        {/* Active Investigations */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="text-[11px] font-mono uppercase">Active Triage</span>
+            <Eye className="w-4 h-4 text-cyan-400" />
+          </div>
+          <div className="text-2xl font-bold font-mono text-cyan-400">
+            {stats?.active_investigations || '0'}
+          </div>
+          <div className="text-[10px] text-gray-400 font-mono">Under Analyst Review</div>
+        </div>
       </div>
 
-      {/* Top 6 KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard
-          title="Total Scans"
-          value={stats?.total_scanned ?? 0}
-          icon={Activity}
-          iconColor="text-cyan-400"
-          iconBg="bg-cyan-500/10"
-          subtitle="Analyzed endpoints"
-        />
-        <StatCard
-          title="Safe URLs"
-          value={stats?.safe_count ?? 0}
-          icon={ShieldCheck}
-          iconColor="text-emerald-400"
-          iconBg="bg-emerald-500/10"
-          subtitle="Clean structural profile"
-        />
-        <StatCard
-          title="Suspicious"
-          value={stats?.suspicious_count ?? 0}
-          icon={AlertTriangle}
-          iconColor="text-amber-400"
-          iconBg="bg-amber-500/10"
-          subtitle="Anomalous signals"
-        />
-        <StatCard
-          title="Phishing URLs"
-          value={stats?.phishing_count ?? 0}
-          icon={ShieldAlert}
-          iconColor="text-rose-400"
-          iconBg="bg-rose-500/10"
-          subtitle="Active threat vectors"
-        />
-        <StatCard
-          title="Avg Risk Score"
-          value={`${stats?.avg_risk_score ?? 0}/100`}
-          icon={TrendingUp}
-          iconColor="text-purple-400"
-          iconBg="bg-purple-500/10"
-          subtitle="Across all telemetry"
-        />
-        <StatCard
-          title="High Risk Alerts"
-          value={stats?.high_risk_count ?? 0}
-          icon={Flame}
-          iconColor="text-orange-400"
-          iconBg="bg-orange-500/10"
-          subtitle="Score >= 60"
-        />
-      </div>
-
-      {/* Charts Grid 1: Line Chart & Donut Chart */}
+      {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Scans Over Time Line Chart (2 Cols) */}
-        <div className="cyber-card p-6 lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div>
-              <h3 className="text-base font-bold text-slate-100">Scan Activity Over Time</h3>
-              <p className="text-xs text-slate-400">Daily breakdown of Safe, Suspicious, and Phishing classifications</p>
-            </div>
-            <div className="flex items-center gap-4 text-xs font-mono">
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Safe
-              </span>
-              <span className="flex items-center gap-1.5 text-amber-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Suspicious
-              </span>
-              <span className="flex items-center gap-1.5 text-rose-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-400" /> Phishing
-              </span>
-            </div>
+        {/* Alerts Over Time (Line Chart) */}
+        <div className="lg:col-span-2 bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-200 font-mono uppercase">Alert Trend Velocity (Last 24 Hours)</h2>
+            <span className="text-[10px] text-gray-400 font-mono">2-Hour Bucket Aggregation</span>
           </div>
-
-          <div className="h-72 w-full">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats?.scans_over_time || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f293d" vertical={false} />
-                <XAxis dataKey="date" stroke="#64748b" fontSize={12} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={12} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#1e293b',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: '#f8fafc',
-                  }}
-                />
-                <Line type="monotone" dataKey="safe" stroke="#10b981" strokeWidth={2.5} dot={{ fill: '#10b981', r: 3 }} />
-                <Line type="monotone" dataKey="suspicious" stroke="#f59e0b" strokeWidth={2.5} dot={{ fill: '#f59e0b', r: 3 }} />
-                <Line type="monotone" dataKey="phishing" stroke="#f43f5e" strokeWidth={2.5} dot={{ fill: '#f43f5e', r: 3 }} />
+              <LineChart data={charts?.alerts_over_time || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
+                <XAxis dataKey="time" stroke="#6B7280" fontSize={11} />
+                <YAxis stroke="#6B7280" fontSize={11} />
+                <Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', fontSize: '12px', fontFamily: 'monospace' }} />
+                <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                <Line type="monotone" dataKey="Critical" stroke="#EF4444" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="High" stroke="#F97316" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Medium" stroke="#EAB308" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Low" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Classification Donut Chart (1 Col) */}
-        <div className="cyber-card p-6 space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-base font-bold text-slate-100">Verdict Distribution</h3>
-            <p className="text-xs text-slate-400">Proportion of security classifications</p>
-          </div>
-
-          <div className="h-56 w-full relative">
+        {/* Severity Distribution (Donut Chart) */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-sm font-bold text-gray-200 font-mono uppercase">Alert Severity Breakdown</h2>
+          <div className="h-64 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={stats?.classification_distribution || []}
+                  data={charts?.severity_distribution || []}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
+                  innerRadius={55}
+                  outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {stats?.classification_distribution.map((entry, index) => (
+                  {charts?.severity_distribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#1e293b',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', fontSize: '12px', fontFamily: 'monospace' }} />
+                <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace' }} />
               </PieChart>
             </ResponsiveContainer>
-            {/* Center Label */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-extrabold text-slate-100">{stats?.total_scanned ?? 0}</span>
-              <span className="text-[10px] uppercase font-mono text-slate-400">Total Scanned</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs font-mono">
-            {stats?.classification_distribution.map((c) => (
-              <div key={c.name} className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                <div className="font-bold" style={{ color: c.color }}>{c.value}</div>
-                <div className="text-[10px] text-slate-400">{c.name}</div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* Charts Grid 2: Risk Tier Distribution & Top Triggered Rules */}
+      {/* Middle Row: Attack Categories & Top Suspicious IPs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Risk Distribution Bar Chart */}
-        <div className="cyber-card p-6 space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-base font-bold text-slate-100">Risk Score Tier Distribution</h3>
-            <p className="text-xs text-slate-400">Scans categorized by multi-factor threat index</p>
-          </div>
-
-          <div className="h-64 w-full">
+        {/* Attack Categories Bar Chart */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-sm font-bold text-gray-200 font-mono uppercase">Top Attack Vectors & Categories</h2>
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats?.risk_distribution || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f293d" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#1e293b',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {stats?.risk_distribution.map((entry, index) => (
-                    <Cell key={`bar-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
+              <BarChart data={charts?.attack_categories || []} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
+                <XAxis type="number" stroke="#6B7280" fontSize={11} />
+                <YAxis dataKey="category" type="category" stroke="#6B7280" fontSize={10} width={120} />
+                <Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', fontSize: '12px', fontFamily: 'monospace' }} />
+                <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Top Triggered Rules */}
-        <div className="cyber-card p-6 space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-base font-bold text-slate-100">Top Triggered Security Rules</h3>
-            <p className="text-xs text-slate-400">Most frequent heuristic detection triggers</p>
+        {/* Top Suspicious IPs Table */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-200 font-mono uppercase">Top Threat Source IP Addresses</h2>
+            <Link to="/threat-intelligence" className="text-xs text-blue-400 hover:underline flex items-center font-mono">
+              <span>Threat Intel</span>
+              <ArrowUpRight className="w-3 h-3 ml-0.5" />
+            </Link>
           </div>
-
-          <div className="space-y-3">
-            {stats?.top_triggered_rules && stats.top_triggered_rules.length > 0 ? (
-              stats.top_triggered_rules.map((rule) => (
-                <div key={rule.rule_id} className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-lg flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold text-cyan-400">{rule.rule_id}</span>
-                      <span className="text-xs font-medium text-slate-200">{rule.rule_name}</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-slate-400 uppercase">
-                      Severity: <span className="text-amber-400">{rule.severity}</span>
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-bold font-mono text-rose-400 px-2 py-0.5 bg-rose-500/10 rounded border border-rose-500/20">
-                      {rule.count} {rule.count === 1 ? 'Hit' : 'Hits'}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-500 italic text-center py-8">
-                No security rules triggered yet. Run sample scans to populate data.
-              </p>
-            )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-[#1F2937] text-gray-400 uppercase">
+                <tr>
+                  <th className="px-3 py-2 rounded-l">SOURCE IP</th>
+                  <th className="px-3 py-2">ALERTS</th>
+                  <th className="px-3 py-2">MAX SEVERITY</th>
+                  <th className="px-3 py-2 rounded-r text-right">ACTION</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {charts?.top_source_ips.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-800/40">
+                    <td className="px-3 py-2.5 font-bold text-gray-200">{item.ip}</td>
+                    <td className="px-3 py-2.5">{item.alerts} alerts</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`px-2 py-0.5 rounded text-[10px] border font-bold ${getSeverityBadgeClass(item.severity)}`}>
+                        {item.severity}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right">
+                      <Link
+                        to={`/logs?source_ip=${item.ip}`}
+                        className="text-blue-400 hover:text-blue-300 font-semibold"
+                      >
+                        Inspect Logs
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      {/* Recent Scans Table */}
-      <div className="cyber-card p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div>
-            <h3 className="text-base font-bold text-slate-100">Recent Telemetry & Investigations</h3>
-            <p className="text-xs text-slate-400">Latest URL security analyses recorded in database</p>
+      {/* Real-Time Live Alert Feed Section */}
+      <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
+            <h2 className="text-sm font-bold text-gray-200 font-mono uppercase">REAL-TIME THREAT ALERT FEED</h2>
           </div>
-          <button
-            onClick={() => navigate('/history')}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
-          >
-            View All Scans
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+
+          <div className="flex items-center space-x-3">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search alerts..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-[#1F2937] border border-gray-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono w-48"
+              />
+            </div>
+
+            {/* Severity Filter Chips */}
+            <div className="flex items-center space-x-1 font-mono text-[11px]">
+              {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((sev) => (
+                <button
+                  key={sev}
+                  onClick={() => setSeverityFilter(sev)}
+                  className={`px-2.5 py-1 rounded border transition-colors ${
+                    severityFilter === sev
+                      ? 'bg-blue-600/20 border-blue-500 text-blue-400 font-bold'
+                      : 'bg-gray-800/40 border-gray-700 text-gray-400 hover:bg-gray-800'
+                  }`}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
+        {/* Alert Feed Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 text-xs uppercase text-slate-400 tracking-wider">
-                <th className="pb-3 px-3 font-semibold">Target URL / Domain</th>
-                <th className="pb-3 px-3 font-semibold">Classification</th>
-                <th className="pb-3 px-3 font-semibold">Risk Score</th>
-                <th className="pb-3 px-3 font-semibold">ML Phish Prob</th>
-                <th className="pb-3 px-3 font-semibold">Timestamp</th>
-                <th className="pb-3 px-3 font-semibold text-right">Action</th>
+          <table className="w-full text-left text-xs font-mono">
+            <thead className="bg-[#1F2937] text-gray-400 uppercase">
+              <tr>
+                <th className="px-3 py-2.5 rounded-l">SEVERITY</th>
+                <th className="px-3 py-2.5">ALERT ID</th>
+                <th className="px-3 py-2.5">TITLE</th>
+                <th className="px-3 py-2.5">SOURCE IP</th>
+                <th className="px-3 py-2.5">TARGET USER</th>
+                <th className="px-3 py-2.5">RISK SCORE</th>
+                <th className="px-3 py-2.5">STATUS</th>
+                <th className="px-3 py-2.5 rounded-r text-right">INVESTIGATE</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {stats?.recent_scans && stats.recent_scans.length > 0 ? (
-                stats.recent_scans.map((scan) => (
-                  <tr key={scan.id} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="py-3 px-3">
-                      <div className="font-mono text-xs text-slate-200 max-w-sm truncate font-medium">
-                        {scan.url}
-                      </div>
-                      <div className="text-[11px] text-slate-500 font-mono">
-                        {scan.domain || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <RiskBadge verdict={scan.classification} size="sm" />
-                    </td>
-                    <td className="py-3 px-3 font-mono font-bold text-xs">
-                      <span className={scan.risk_score >= 60 ? 'text-rose-400' : (scan.risk_score >= 30 ? 'text-amber-400' : 'text-emerald-400')}>
-                        {scan.risk_score} / 100
+            <tbody className="divide-y divide-gray-800">
+              {alerts.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-gray-500">
+                    No matching alerts found for current criteria.
+                  </td>
+                </tr>
+              ) : (
+                alerts.map((alert) => (
+                  <tr key={alert.id} className="hover:bg-gray-800/40 transition-colors">
+                    <td className="px-3 py-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] border font-bold ${getSeverityBadgeClass(alert.severity)}`}>
+                        {alert.severity}
                       </span>
                     </td>
-                    <td className="py-3 px-3 font-mono text-xs text-slate-300">
-                      {(scan.ml_probability * 100).toFixed(1)}%
+                    <td className="px-3 py-3 text-blue-400 font-bold">{alert.alert_id}</td>
+                    <td className="px-3 py-3 font-semibold text-gray-200 max-w-xs truncate">{alert.title}</td>
+                    <td className="px-3 py-3 text-gray-300">{alert.source_ip || 'N/A'}</td>
+                    <td className="px-3 py-3 text-gray-400">{alert.username || 'System'}</td>
+                    <td className="px-3 py-3 font-bold text-gray-100">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-12 bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`h-full ${alert.risk_score >= 80 ? 'bg-red-500' : alert.risk_score >= 60 ? 'bg-orange-500' : 'bg-yellow-500'}`}
+                            style={{ width: `${alert.risk_score}%` }}
+                          ></div>
+                        </div>
+                        <span>{alert.risk_score}</span>
+                      </div>
                     </td>
-                    <td className="py-3 px-3 text-xs text-slate-400 font-mono">
-                      {formatDateTime(scan.timestamp)}
+                    <td className="px-3 py-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] ${
+                        alert.status === 'New' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' :
+                        alert.status === 'Investigating' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30' :
+                        'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      }`}>
+                        {alert.status}
+                      </span>
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={() => navigate(`/scan/${scan.id}`)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-slate-300 text-xs font-semibold transition-all"
+                    <td className="px-3 py-3 text-right">
+                      <Link
+                        to={`/alerts/${alert.alert_id}`}
+                        className="inline-flex items-center space-x-1 text-blue-400 hover:text-blue-300 font-bold bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded transition-colors"
                       >
-                        Inspect
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
+                        <span>Triage</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-xs text-slate-500 italic">
-                    No scan telemetry available.
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>

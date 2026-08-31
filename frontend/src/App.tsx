@@ -1,45 +1,45 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
 import { DashboardLayout } from './layouts/DashboardLayout';
-import { ProtectedRoute } from './components/ProtectedRoute';
-
+import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { ScannerPage } from './pages/ScannerPage';
-import { ScanDetailPage } from './pages/ScanDetailPage';
-import { HistoryPage } from './pages/HistoryPage';
-import { ComparePage } from './pages/ComparePage';
+import { AlertsPage } from './pages/AlertsPage';
+import { AlertDetailsPage } from './pages/AlertDetailsPage';
+import { LogsPage } from './pages/LogsPage';
+import { IncidentsPage } from './pages/IncidentsPage';
+import { IncidentDetailsPage } from './pages/IncidentDetailsPage';
+import { RulesPage } from './pages/RulesPage';
 import { ThreatIntelPage } from './pages/ThreatIntelPage';
 import { SimulationsPage } from './pages/SimulationsPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
-import { LoginPage } from './pages/LoginPage';
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return <DashboardLayout>{children}</DashboardLayout>;
+};
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Authentication Route */}
-          <Route path="/login" element={<LoginPage />} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        
+        <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
+        <Route path="/alerts/:id" element={<ProtectedRoute><AlertDetailsPage /></ProtectedRoute>} />
+        <Route path="/logs" element={<ProtectedRoute><LogsPage /></ProtectedRoute>} />
+        <Route path="/incidents" element={<ProtectedRoute><IncidentsPage /></ProtectedRoute>} />
+        <Route path="/incidents/:id" element={<ProtectedRoute><IncidentDetailsPage /></ProtectedRoute>} />
+        <Route path="/rules" element={<ProtectedRoute><RulesPage /></ProtectedRoute>} />
+        <Route path="/threat-intelligence" element={<ProtectedRoute><ThreatIntelPage /></ProtectedRoute>} />
+        <Route path="/simulations" element={<ProtectedRoute><SimulationsPage /></ProtectedRoute>} />
+        <Route path="/system-health" element={<ProtectedRoute><SystemHealthPage /></ProtectedRoute>} />
 
-          {/* Main Dashboard Application Shell */}
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/scanner" element={<ScannerPage />} />
-            <Route path="/scan/:id" element={<ScanDetailPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/compare" element={<ComparePage />} />
-            <Route path="/threat-intelligence" element={<ThreatIntelPage />} />
-            <Route path="/simulations" element={<SimulationsPage />} />
-            <Route path="/system-health" element={<SystemHealthPage />} />
-          </Route>
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
-
-export default App;

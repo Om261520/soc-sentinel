@@ -1,166 +1,142 @@
-import React, { useEffect, useState } from 'react';
-import { healthService } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { Activity, Database, Cpu, HardDrive, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { api } from '../services/api';
 import { SystemHealth } from '../types';
-import { formatDateTime } from '../utils/formatters';
-import {
-  Activity,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  Server,
-  Database,
-  Brain,
-  Shield,
-  Clock,
-  RefreshCw,
-  Cpu,
-} from 'lucide-react';
 
 export const SystemHealthPage: React.FC = () => {
   const [health, setHealth] = useState<SystemHealth | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
-  const fetchHealth = async () => {
-    setLoading(true);
+  const loadHealth = async () => {
     try {
-      const data = await healthService.getHealth();
+      setLoading(true);
+      const data = await api.getSystemHealth();
       setHealth(data);
     } catch (err) {
-      console.error('Error fetching system health:', err);
+      console.error('Failed to load health:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 15000); // Poll every 15s
-    return () => clearInterval(interval);
+    loadHealth();
   }, []);
 
-  const getServiceIcon = (key: string) => {
-    switch (key) {
-      case 'api':
-        return <Server className="w-6 h-6 text-cyan-400" />;
-      case 'database':
-        return <Database className="w-6 h-6 text-emerald-400" />;
-      case 'ml_model':
-        return <Brain className="w-6 h-6 text-purple-400" />;
-      case 'detection_engine':
-        return <Shield className="w-6 h-6 text-amber-400" />;
-      default:
-        return <Cpu className="w-6 h-6 text-slate-400" />;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'healthy':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-            <CheckCircle className="w-3.5 h-3.5" />
-            OPERATIONAL
-          </span>
-        );
-      case 'degraded':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            DEGRADED
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
-            <XCircle className="w-3.5 h-3.5" />
-            OFFLINE
-          </span>
-        );
-    }
-  };
-
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-100 flex items-center gap-3">
-            <Activity className="w-8 h-8 text-cyan-400" />
-            <span>PhishGuard System Health & Runtime Probes</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time latency, operational status, and telemetry across all detection subsystems.
-          </p>
+          <h1 className="text-xl font-bold text-white font-mono">SOC INFRASTRUCTURE SYSTEM HEALTH</h1>
+          <p className="text-xs text-gray-400 font-mono">Real-time health status of API, Database, Detection Engine & Log Pipeline</p>
         </div>
-
         <button
-          onClick={fetchHealth}
-          disabled={loading}
-          className="self-start md:self-auto inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-cyan-400 hover:border-cyan-500/30 transition-all"
+          onClick={loadHealth}
+          className="flex items-center space-x-2 px-3 py-1.5 bg-[#1F2937] hover:bg-gray-700 text-gray-300 text-xs font-mono rounded-lg border border-gray-700 transition-colors"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
-          Run Health Probe
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>RUN HEALTH CHECK</span>
         </button>
       </div>
 
-      {/* Overview Banner */}
-      <div className="cyber-card p-6 border-cyan-500/30 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-cyan-950/20">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-              <CheckCircle className="w-8 h-8" />
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-bold text-slate-100">All Subsystems Operational</h3>
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5 font-mono">
-                Version: {health?.version || '1.0.0'} • Engine Mode: Fast Static Analysis
-              </p>
-            </div>
+      {/* Health Overview Banner */}
+      <div className="bg-[#111827] border border-emerald-500/30 rounded-xl p-5 flex items-center justify-between font-mono">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
-
-          <div className="flex items-center gap-6 text-xs font-mono text-slate-400">
-            <div className="text-right">
-              <span className="block text-[10px] text-slate-500 uppercase">System Uptime</span>
-              <span className="font-bold text-slate-200">{health?.uptime_seconds ?? 0} Seconds</span>
-            </div>
-            <div className="text-right">
-              <span className="block text-[10px] text-slate-500 uppercase">Last Probe Time</span>
-              <span className="font-bold text-slate-200">{formatDateTime(health?.timestamp)}</span>
-            </div>
+          <div>
+            <h2 className="text-sm font-bold text-white uppercase">ALL SOC SYSTEM PIPELINES OPERATIONAL</h2>
+            <p className="text-xs text-gray-400">Last diagnostic timestamp: {health?.timestamp || new Date().toISOString()}</p>
           </div>
         </div>
+        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded text-xs font-bold">
+          STATUS: {health?.status || 'HEALTHY'}
+        </span>
       </div>
 
-      {/* Services Breakdown Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {health?.services &&
-          Object.entries(health.services).map(([key, service]) => (
-            <div key={key} className="cyber-card p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
-                    {getServiceIcon(key)}
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-100 capitalize">
-                      {key.replace(/_/g, ' ')} Subsystem
-                    </h4>
-                    <span className="text-[11px] font-mono text-slate-400">
-                      Response Latency: <strong className="text-cyan-400">{service.latency_ms} ms</strong>
-                    </span>
-                  </div>
-                </div>
-                {getStatusBadge(service.status)}
-              </div>
+      {/* Services Diagnostics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
+        {/* API Gateway */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="font-bold text-white uppercase">FastAPI Backend API</span>
+            <Activity className="w-4 h-4 text-blue-400" />
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-800 pt-3">
+            <span className="text-gray-500">Service Status:</span>
+            <span className="text-emerald-400 font-bold">{health?.services.api.status || 'ONLINE'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">API Latency:</span>
+            <span className="text-gray-200">{health?.services.api.latency_ms || 1.2} ms</span>
+          </div>
+        </div>
 
-              <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-lg text-xs text-slate-300 font-mono leading-relaxed">
-                {service.details || 'Subsystem is responding normally without errors.'}
-              </div>
-            </div>
-          ))}
+        {/* Database Engine */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="font-bold text-white uppercase">Database Engine</span>
+            <Database className="w-4 h-4 text-cyan-400" />
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-800 pt-3">
+            <span className="text-gray-500">Database Status:</span>
+            <span className="text-emerald-400 font-bold">{health?.services.database.status || 'ONLINE'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">ORM Engine:</span>
+            <span className="text-gray-200">{health?.services.database.engine || 'SQLite'}</span>
+          </div>
+        </div>
+
+        {/* Detection Engine */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="font-bold text-white uppercase">Detection Rule Engine</span>
+            <Cpu className="w-4 h-4 text-purple-400" />
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-800 pt-3">
+            <span className="text-gray-500">Rule Engine Status:</span>
+            <span className="text-emerald-400 font-bold">{health?.services.detection_engine.status || 'ONLINE'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Active Rules:</span>
+            <span className="text-gray-200">{health?.services.detection_engine.active_rules || 8} Active Rules</span>
+          </div>
+        </div>
+
+        {/* Log Pipeline */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="font-bold text-white uppercase">Log Ingestion Pipeline</span>
+            <HardDrive className="w-4 h-4 text-orange-400" />
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-800 pt-3">
+            <span className="text-gray-500">Pipeline Status:</span>
+            <span className="text-emerald-400 font-bold">{health?.services.log_pipeline.status || 'ONLINE'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Ingestion Mode:</span>
+            <span className="text-gray-200">{health?.services.log_pipeline.ingestion_mode || 'REALTIME'}</span>
+          </div>
+        </div>
+
+        {/* AI Triage Analyst */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-gray-400">
+            <span className="font-bold text-white uppercase">AI Triage Analyst</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-800 pt-3">
+            <span className="text-gray-500">Analyzer Status:</span>
+            <span className="text-emerald-400 font-bold">{health?.services.ai_analyzer.status || 'ONLINE'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Triage Engine Mode:</span>
+            <span className="text-gray-200">{health?.services.ai_analyzer.mode || 'HYBRID_DETERMINISTIC'}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

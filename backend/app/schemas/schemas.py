@@ -1,235 +1,188 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, List, Any, Dict
+from pydantic import BaseModel, EmailStr
 
-
-# ----------------- Auth Schemas -----------------
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-
-class UserRegister(BaseModel):
-    username: str
-    email: str
-    password: str
-    role: Optional[str] = "analyst"
-
-
-class UserResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-    role: str
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
+# Auth Schemas
 class Token(BaseModel):
     access_token: str
     token_type: str
-    user: UserResponse
-
-
-class TokenPayload(BaseModel):
-    sub: Optional[str] = None
-    role: Optional[str] = None
-    exp: Optional[int] = None
-
-
-# ----------------- Feature & Detection Schemas -----------------
-class FeatureItem(BaseModel):
-    id: Optional[int] = None
-    feature_name: str
-    feature_value: str
-    risk_contribution: Optional[str] = None
-    significance: Optional[str] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class DetectionRuleItem(BaseModel):
-    id: Optional[int] = None
-    rule_id: str
-    rule_name: str
-    severity: str
-    description: str
-    score: int
-    triggered: bool
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class AnalystNoteCreate(BaseModel):
-    scan_id: int
-    note: str
-
-
-class AnalystNoteResponse(BaseModel):
-    id: int
-    scan_id: int
-    user_id: Optional[int] = None
     username: str
-    note: str
+    role: str
+    email: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class UserBase(BaseModel):
+    username: str
+    email: EmailStr
+    role: str
+
+class UserCreate(UserBase):
+    password: str
+
+class UserResponse(UserBase):
+    id: int
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
-
-# ----------------- Scan Schemas -----------------
-class ScanCreate(BaseModel):
-    url: str = Field(..., description="Target URL for static cybersecurity analysis")
-
-
-class ContributingFactor(BaseModel):
-    factor: str
-    score: int
-    category: str
-
-
-class ExplainableAnalysis(BaseModel):
-    summary: str
-    reasons: List[str]
-    ml_confidence: float
-    benign_probability: float
-    phishing_probability: float
-    rule_risk_score: int
-    contributing_factors: List[ContributingFactor]
-
-
-class ScanDetailResponse(BaseModel):
-    id: int
-    url: str
-    domain: Optional[str] = None
+# Security Log Schemas
+class LogCreate(BaseModel):
+    timestamp: Optional[datetime] = None
+    source_ip: Optional[str] = None
+    destination_ip: Optional[str] = None
+    source_port: Optional[int] = None
+    destination_port: Optional[int] = None
     protocol: Optional[str] = None
-    classification: str  # SAFE, SUSPICIOUS, PHISHING
-    risk_score: int  # 0 - 100
-    ml_probability: float  # 0.0 - 1.0
-    rule_score: int  # 0 - 100
-    recommendation: Optional[str] = None
-    executive_summary: Optional[str] = None
-    timestamp: datetime
-    created_at: datetime
-    features: List[FeatureItem] = []
-    detections: List[DetectionRuleItem] = []
-    notes: List[AnalystNoteResponse] = []
-    explainable_analysis: Optional[ExplainableAnalysis] = None
-    extracted_features_dict: Optional[Dict[str, Any]] = None
+    event_type: str
+    username: Optional[str] = None
+    hostname: Optional[str] = None
+    action: Optional[str] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
+    raw_log: Optional[str] = None
+    severity: Optional[str] = "LOW"
 
-    model_config = ConfigDict(from_attributes=True)
+class LogBulkCreate(BaseModel):
+    logs: List[LogCreate]
 
-
-class ScanSummary(BaseModel):
+class LogResponse(LogCreate):
     id: int
-    url: str
-    domain: Optional[str] = None
-    classification: str
-    risk_score: int
-    ml_probability: float
-    rule_score: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Alert Schemas
+class AlertResponse(BaseModel):
+    id: int
+    alert_id: str
     timestamp: datetime
+    title: str
+    description: str
+    rule_name: str
+    source_ip: Optional[str] = None
+    destination_ip: Optional[str] = None
+    username: Optional[str] = None
+    severity: str
+    risk_score: int
+    risk_factors: Optional[List[Dict[str, Any]]] = None
+    status: str
+    category: str
+    mitre_technique: Optional[str] = None
+    mitre_name: Optional[str] = None
+    trigger_log_ids: Optional[List[int]] = None
+    incident_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
+class AlertStatusUpdate(BaseModel):
+    status: str # New, Investigating, Resolved, False Positive
 
-class PaginatedScansResponse(BaseModel):
-    items: List[ScanSummary]
-    total: int
-    page: int
-    limit: int
-    pages: int
+# Incident Schemas
+class IncidentNoteCreate(BaseModel):
+    content: str
 
+class IncidentNoteResponse(BaseModel):
+    id: int
+    incident_id: int
+    author: str
+    content: str
+    created_at: datetime
 
-# ----------------- URL Comparison Schemas -----------------
-class ScanCompareRequest(BaseModel):
-    url_a: str
-    url_b: str
+    class Config:
+        from_attributes = True
 
+class IncidentCreate(BaseModel):
+    title: str
+    description: str
+    severity: str = "HIGH"
+    assigned_to: Optional[str] = "Unassigned"
+    alert_ids: Optional[List[int]] = []
 
-class CompareFeatureDiff(BaseModel):
-    feature: str
-    value_a: Any
-    value_b: Any
-    verdict: str  # 'EQUAL', 'A_RISKIER', 'B_RISKIER'
+class IncidentUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    severity: Optional[str] = None
+    status: Optional[str] = None # Open, Investigating, Contained, Resolved, Closed
+    assigned_to: Optional[str] = None
 
+class IncidentResponse(BaseModel):
+    id: int
+    incident_id: str
+    title: str
+    description: str
+    severity: str
+    status: str
+    assigned_to: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    resolved_at: Optional[datetime] = None
+    alerts: List[AlertResponse] = []
+    notes: List[IncidentNoteResponse] = []
 
-class ScanCompareResponse(BaseModel):
-    scan_a: ScanDetailResponse
-    scan_b: ScanDetailResponse
-    feature_diffs: List[CompareFeatureDiff]
-    risk_delta: int
-    safer_url: str
+    class Config:
+        from_attributes = True
 
+# Detection Rule Schemas
+class RuleUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    threshold: Optional[int] = None
+    time_window: Optional[int] = None
+    severity: Optional[str] = None
 
-# ----------------- Threat Intelligence Schemas -----------------
-class ThreatIndicatorItem(BaseModel):
+class RuleResponse(BaseModel):
+    id: int
+    rule_id: str
+    name: str
+    description: str
+    category: str
+    severity: str
+    enabled: bool
+    threshold: int
+    time_window: int
+    mitre_technique: Optional[str] = None
+    mitre_name: Optional[str] = None
+    logic_type: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Threat Intel Schema
+class ThreatIntelResponse(BaseModel):
     id: int
     indicator: str
-    indicator_type: str  # URL, DOMAIN, IP, HASH
-    threat_category: str
+    type: str
+    reputation: str
     confidence: int
     first_seen: datetime
     last_seen: datetime
-    source: str
-    is_demo: bool
+    category: str
+    description: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
+# Simulation Request
+class SimulationRequest(BaseModel):
+    attack_type: str # brute_force, port_scan, sqli, powershell, priv_esc, malware, impossible_travel
+    source_ip: Optional[str] = "185.220.101.5"
+    target_user: Optional[str] = "admin"
+    count: Optional[int] = 10
 
-# ----------------- Dashboard & Stats Schemas -----------------
-class TimeSeriesDataPoint(BaseModel):
-    date: str
-    safe: int
-    suspicious: int
-    phishing: int
-    total: int
-
-
-class CategoryDistribution(BaseModel):
-    name: str
-    value: int
-    color: str
-
-
-class TopTriggeredRule(BaseModel):
-    rule_id: str
-    rule_name: str
-    count: int
-    severity: str
-
-
-class DashboardStatsResponse(BaseModel):
-    total_scanned: int
-    safe_count: int
-    suspicious_count: int
-    phishing_count: int
-    avg_risk_score: float
-    high_risk_count: int
-    classification_distribution: List[CategoryDistribution]
-    risk_distribution: List[CategoryDistribution]
-    scans_over_time: List[TimeSeriesDataPoint]
-    top_triggered_rules: List[TopTriggeredRule]
-    recent_scans: List[ScanSummary]
-
-
-# ----------------- System Health Schemas -----------------
-class ServiceHealth(BaseModel):
-    status: str  # 'healthy', 'degraded', 'error'
-    latency_ms: float
-    details: Optional[str] = None
-
-
-class SystemHealthResponse(BaseModel):
-    status: str
-    timestamp: datetime
-    services: Dict[str, ServiceHealth]
-    version: str
-    uptime_seconds: float
-
-
-# ----------------- Report Generation Schemas -----------------
-class ReportGenerateRequest(BaseModel):
-    scan_id: int
-    include_notes: bool = True
-    analyst_signature: Optional[str] = "PhishGuard Automated SOC Agent"
+# AI Analysis Response
+class AIAnalysisResponse(BaseModel):
+    alert_id: str
+    threat_summary: str
+    attack_type: str
+    suspicious_indicators: List[str]
+    mitre_context: str
+    recommended_steps: List[str]
+    containment_recommendation: str

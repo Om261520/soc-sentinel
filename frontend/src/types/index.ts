@@ -1,175 +1,143 @@
-export type UserRole = 'admin' | 'analyst' | 'viewer';
-
 export interface User {
   id: number;
   username: string;
   email: string;
-  role: UserRole;
+  role: 'admin' | 'analyst' | 'viewer';
   created_at: string;
 }
 
-export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
-}
-
-export interface FeatureItem {
-  id?: number;
-  feature_name: string;
-  feature_value: string;
-  risk_contribution?: string;
-  significance?: string;
-}
-
-export interface DetectionRuleItem {
-  id?: number;
-  rule_id: string;
-  rule_name: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  description: string;
-  score: number;
-  triggered: boolean;
-}
-
-export interface AnalystNote {
+export interface SecurityLog {
   id: number;
-  scan_id: number;
-  user_id?: number;
-  username: string;
-  note: string;
-  created_at: string;
-}
-
-export interface ContributingFactor {
-  factor: string;
-  score: number;
-  category: string;
-}
-
-export interface ExplainableAnalysis {
-  summary: string;
-  reasons: string[];
-  ml_confidence: number;
-  benign_probability: number;
-  phishing_probability: number;
-  rule_risk_score: number;
-  contributing_factors: ContributingFactor[];
-}
-
-export type ThreatVerdict = 'SAFE' | 'SUSPICIOUS' | 'PHISHING';
-
-export interface ScanDetail {
-  id: number;
-  url: string;
-  domain?: string;
+  timestamp: string;
+  source_ip?: string;
+  destination_ip?: string;
+  source_port?: number;
+  destination_port?: number;
   protocol?: string;
-  classification: ThreatVerdict;
-  risk_score: number;
-  ml_probability: number;
-  rule_score: number;
-  recommendation?: string;
-  executive_summary?: string;
-  timestamp: string;
+  event_type: string;
+  username?: string;
+  hostname?: string;
+  action?: string;
+  status?: string;
+  message?: string;
+  raw_log?: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   created_at: string;
-  features: FeatureItem[];
-  detections: DetectionRuleItem[];
-  notes: AnalystNote[];
-  explainable_analysis?: ExplainableAnalysis;
-  extracted_features_dict?: Record<string, any>;
 }
 
-export interface ScanSummary {
+export interface RiskFactor {
+  factor: string;
+  points: number;
+}
+
+export interface Alert {
   id: number;
-  url: string;
-  domain?: string;
-  classification: ThreatVerdict;
-  risk_score: number;
-  ml_probability: number;
-  rule_score: number;
+  alert_id: string;
   timestamp: string;
+  title: string;
+  description: string;
+  rule_name: string;
+  source_ip?: string;
+  destination_ip?: string;
+  username?: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  risk_score: number;
+  risk_factors?: RiskFactor[];
+  status: 'New' | 'Investigating' | 'Resolved' | 'False Positive';
+  category: string;
+  mitre_technique?: string;
+  mitre_name?: string;
+  trigger_log_ids?: number[];
+  incident_id?: number;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface PaginatedScans {
-  items: ScanSummary[];
-  total: number;
-  page: number;
-  limit: number;
-  pages: number;
+export interface IncidentNote {
+  id: number;
+  incident_id: number;
+  author: string;
+  content: string;
+  created_at: string;
 }
 
-export interface CompareFeatureDiff {
-  feature: string;
-  value_a: any;
-  value_b: any;
-  verdict: 'EQUAL' | 'A_RISKIER' | 'B_RISKIER' | 'DIFFERENT';
+export interface Incident {
+  id: number;
+  incident_id: string;
+  title: string;
+  description: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'Open' | 'Investigating' | 'Contained' | 'Resolved' | 'Closed';
+  assigned_to?: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at?: string;
+  alerts: Alert[];
+  notes: IncidentNote[];
 }
 
-export interface ScanCompareResponse {
-  scan_a: ScanDetail;
-  scan_b: ScanDetail;
-  feature_diffs: CompareFeatureDiff[];
-  risk_delta: number;
-  safer_url: string;
+export interface DetectionRule {
+  id: number;
+  rule_id: string;
+  name: string;
+  description: string;
+  category: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  enabled: boolean;
+  threshold: number;
+  time_window: number;
+  mitre_technique?: string;
+  mitre_name?: string;
+  logic_type: string;
+  created_at: string;
 }
 
-export interface ThreatIndicator {
+export interface ThreatIntel {
   id: number;
   indicator: string;
-  indicator_type: 'URL' | 'DOMAIN' | 'IP' | 'HASH';
-  threat_category: string;
+  type: 'IP' | 'Domain' | 'Hash' | 'URL';
+  reputation: 'MALICIOUS' | 'SUSPICIOUS' | 'BENIGN';
   confidence: number;
   first_seen: string;
   last_seen: string;
-  source: string;
-  is_demo: boolean;
-}
-
-export interface CategoryDistribution {
-  name: string;
-  value: number;
-  color: string;
-}
-
-export interface TimeSeriesDataPoint {
-  date: string;
-  safe: number;
-  suspicious: number;
-  phishing: number;
-  total: number;
-}
-
-export interface TopTriggeredRule {
-  rule_id: string;
-  rule_name: string;
-  count: number;
-  severity: string;
+  category: string;
+  description?: string;
 }
 
 export interface DashboardStats {
-  total_scanned: number;
-  safe_count: number;
-  suspicious_count: number;
-  phishing_count: number;
-  avg_risk_score: number;
-  high_risk_count: number;
-  classification_distribution: CategoryDistribution[];
-  risk_distribution: CategoryDistribution[];
-  scans_over_time: TimeSeriesDataPoint[];
-  top_triggered_rules: TopTriggeredRule[];
-  recent_scans: ScanSummary[];
+  total_events: number;
+  critical_alerts: number;
+  high_alerts: number;
+  open_incidents: number;
+  threats_detected: number;
+  active_investigations: number;
 }
 
-export interface ServiceHealth {
-  status: 'healthy' | 'degraded' | 'error';
-  latency_ms: number;
-  details?: string;
+export interface DashboardCharts {
+  severity_distribution: Array<{ name: string; value: number; color: string }>;
+  attack_categories: Array<{ category: string; count: number }>;
+  top_source_ips: Array<{ ip: string; alerts: number; severity: string }>;
+  alerts_over_time: Array<{ time: string; Critical: number; High: number; Medium: number; Low: number }>;
+}
+
+export interface AIAnalysis {
+  alert_id: string;
+  threat_summary: string;
+  attack_type: string;
+  suspicious_indicators: string[];
+  mitre_context: string;
+  recommended_steps: string[];
+  containment_recommendation: string;
 }
 
 export interface SystemHealth {
   status: string;
   timestamp: string;
-  services: Record<string, ServiceHealth>;
-  version: string;
-  uptime_seconds: number;
+  services: {
+    api: { status: string; latency_ms: number };
+    database: { status: string; engine: string };
+    detection_engine: { status: string; active_rules: number };
+    log_pipeline: { status: string; ingestion_mode: string };
+    ai_analyzer: { status: string; mode: string };
+  };
 }

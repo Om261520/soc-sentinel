@@ -1,0 +1,32 @@
+[
+  {
+    "timestamp": "2026-08-27T10:15:22Z",
+    "event_type": "authentication",
+    "source_ip": "185.220.101.5",
+    "destination_ip": "10.0.0.10",
+    "source_port": 52140,
+    "destination_port": 22,
+    "protocol": "SSH",
+    "username": "admin",
+    "hostname": "auth-srv-01",
+    "action": "login",
+    "status": "failed",
+    "message": "SSH authentication failed for user admin from 185.220.101.5",
+    "severity": "MEDIUM"
+  },
+  {
+    "timestamp": "2026-08-27T10:15:27Z",
+    "event_type": "authentication",
+    "source_ip": "185.220.101.5",
+    "destination_ip": "10.0.0.10",
+    "source_port": 52142,
+    "destination_port": 22,
+    "protocol": "SSH",
+    "username": "admin",
+    "hostname": "auth-srv-01",
+    "action": "login",
+    "status": "failed",
+    "message": "SSH authentication failed for user admin from 185.220.101.5",
+    "severity": "MEDIUM"
+  }
+]

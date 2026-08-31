@@ -8,32 +8,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        cyber: {
-          bg: "#090d16",
-          card: "#111827",
-          cardHover: "#182234",
-          border: "#1f293d",
-          accent: "#06b6d4",
-          accentGlow: "rgba(6, 182, 212, 0.15)",
-          emerald: "#10b981",
-          amber: "#f59e0b",
-          rose: "#f43f5e",
-          purple: "#a855f7"
+        soc: {
+          bg: '#0B0F17',
+          surface: '#111827',
+          card: '#1F2937',
+          border: '#374151',
+          hover: '#2D3748',
+          accent: '#3B82F6',
+          cyan: '#06B6D4',
+          critical: '#EF4444',
+          high: '#F97316',
+          medium: '#EAB308',
+          low: '#3B82F6',
+          success: '#10B981',
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
-      },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'scan-line': 'scan 2s linear infinite',
-      },
-      keyframes: {
-        scan: {
-          '0%': { transform: 'translateY(-100%)' },
-          '100%': { transform: 'translateY(1000%)' }
-        }
+        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       }
     },
   },

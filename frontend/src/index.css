@@ -4,58 +4,48 @@
 
 @layer base {
   body {
-    @apply bg-[#090d16] text-slate-100 font-sans min-h-screen overflow-x-hidden;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.04) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.04) 0px, transparent 50%);
+    @apply bg-[#0B0F17] text-gray-100 antialiased;
   }
 }
 
-/* Custom Cyber Scrollbar */
+/* Custom SOC styling & glow utilities */
+.soc-glass {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.glow-critical {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+}
+
+.glow-high {
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.25);
+}
+
+.glow-medium {
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.2);
+}
+
+.glow-low {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+}
+
+/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #0B0F17;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f293d;
+  background: #374151;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #06b6d4;
-}
-
-/* Glassmorphism & Cyber Card Effects */
-.cyber-card {
-  background: linear-gradient(135deg, rgba(17, 24, 39, 0.85) 0%, rgba(15, 23, 42, 0.75) 100%);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(31, 41, 61, 0.8);
-  border-radius: 0.75rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.cyber-card:hover {
-  border-color: rgba(6, 182, 212, 0.35);
-  box-shadow: 0 4px 20px -2px rgba(6, 182, 212, 0.08);
-}
-
-.cyber-glow-cyan {
-  box-shadow: 0 0 25px -3px rgba(6, 182, 212, 0.25);
-}
-
-.cyber-glow-emerald {
-  box-shadow: 0 0 25px -3px rgba(16, 185, 129, 0.25);
-}
-
-.cyber-glow-rose {
-  box-shadow: 0 0 25px -3px rgba(244, 63, 94, 0.25);
-}
-
-.cyber-glow-amber {
-  box-shadow: 0 0 25px -3px rgba(245, 158, 11, 0.25);
+  background: #4B5563;
 }
