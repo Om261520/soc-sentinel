@@ -2,12 +2,17 @@
 
 ### Security Operations Center — Threat Detection & Analysis Platform
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-00f0ff?style=for-the-badge&logo=githubpages&logoColor=black)](https://om261520.github.io/soc-sentinel/)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6.svg)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4+-38B2AC.svg)](https://tailwindcss.com/)
+
+> 🌐 **Live Website / Interactive Demo:** [https://om261520.github.io/soc-sentinel/](https://om261520.github.io/soc-sentinel/)
+>
+> Experience the full SOC analyst dashboard, attack simulation triggers, Sigma detection rule evaluation, MITRE ATT&CK matrix mapping, and AI triage directly in your browser.
 
 **SOC Sentinel** is a portfolio-ready, full-stack Cybersecurity Operations Center (SOC) threat detection and incident analysis platform built from scratch. It ingests security event logs, normalizes telemetry data, evaluates events using a rule-based Detection Engine, calculates threat risk scores (0–100), generates structured alerts mapped to MITRE ATT&CK techniques, and provides SOC analysts with investigation tools, incident management workflows, and attack scenario simulations.
 
